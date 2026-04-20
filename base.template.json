@@ -1,0 +1,58 @@
+{
+  "log": { "loglevel": "warning" },
+
+  "inbounds": [
+    {
+      "tag": "redir-tcp",
+      "listen": "127.0.0.1",
+      "port": 12345,
+      "protocol": "dokodemo-door",
+      "settings": {
+        "network": "tcp",
+        "followRedirect": true
+      }
+    },
+    {
+      "tag": "tproxy-udp",
+      "listen": "127.0.0.1",
+      "port": 12346,
+      "protocol": "dokodemo-door",
+      "settings": {
+        "network": "udp",
+        "followRedirect": false
+      },
+      "sockopt": { "tproxy": "tproxy" }
+    }
+  ],
+
+  "outbounds": [
+    { "tag": "direct", "protocol": "freedom" },
+    { "tag": "block",  "protocol": "blackhole" }
+  ],
+
+  "routing": {
+    "domainStrategy": "AsIs",
+    "balancers": [
+      {
+        "tag": "sub-balancer",
+        "selector": [],
+        "strategy": { "type": "leastPing" },
+        "fallbackTag": "direct"
+      }
+    ],
+    "rules": [
+      { "type": "field", "ip": ["geoip:private"], "outboundTag": "direct" },
+      { "type": "field", "protocol": ["bittorrent"], "outboundTag": "direct" },
+
+      { "type": "field", "inboundTag": ["redir-tcp"], "balancerTag": "sub-balancer" },
+      { "type": "field", "inboundTag": ["tproxy-udp"], "balancerTag": "sub-balancer" }
+    ]
+  },
+
+  "observatory": {
+    "subjectSelector": [],
+    "probeURL": "http://www.gstatic.com/generate_204",
+    "probeInterval": "180s",
+    "enableConcurrency": true
+  }
+}
